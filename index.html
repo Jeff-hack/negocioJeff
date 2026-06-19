@@ -483,6 +483,18 @@ body{background:linear-gradient(180deg,#f8fafc,#eef2f7)!important}
           <div class="stat-sub">Pendientes</div>
         </div>
       </div>
+      <div class="stats-row">
+        <div class="stat-card" style="cursor:pointer" onclick="showSection('ordenes',document.getElementById('navOrd'));setOrdMainTab('clientes')">
+          <div class="stat-label">
+            <div class="stat-icon" style="background:#fdeee9">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d44f2e" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            Adeudo clientes
+          </div>
+          <div class="stat-value" id="dashAdeudoTotal" style="color:var(--red)">$0.00</div>
+          <div class="stat-sub" id="dashAdeudoCnt">0 clientes con saldo</div>
+        </div>
+      </div>
 
       <!-- Resumen semanal -->
       <div class="semana-card">
@@ -637,18 +649,40 @@ body{background:linear-gradient(180deg,#f8fafc,#eef2f7)!important}
     <!-- ══════ SECCIÓN: ÓRDENES (Encargos) ══════ -->
     <div class="v2-section" id="section-ordenes">
     <div class="page active" id="page-ordenes">
-      <div class="section-title">
-        Órdenes / Encargos
-        <button onclick="openEncargoModal(null)" style="background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);padding:5px 12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">+ Encargo</button>
+      <div class="v2-section-tabs">
+        <button class="v2-stab active" id="ordMainTabEncargos" onclick="setOrdMainTab('encargos')">📋 Encargos</button>
+        <button class="v2-stab" id="ordMainTabClientes" onclick="setOrdMainTab('clientes')">👤 Clientes</button>
       </div>
-      <!-- Tabs estado -->
-      <div class="tabs" style="margin-bottom:8px">
-        <button class="tab-btn active" id="ordTabTodos" onclick="setOrdTab('todos')">Todos</button>
-        <button class="tab-btn" id="ordTabPend" onclick="setOrdTab('pendiente')">⏳ Pendiente</button>
-        <button class="tab-btn" id="ordTabListo" onclick="setOrdTab('listo')">✅ Listo</button>
-        <button class="tab-btn" id="ordTabEntr" onclick="setOrdTab('entregado')">📦 Entregado</button>
+
+      <!-- Panel Encargos -->
+      <div id="ordPanelEncargos">
+        <div class="section-title">
+          Encargos
+          <button onclick="openEncargoModal(null)" style="background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);padding:5px 12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">+ Encargo</button>
+        </div>
+        <div class="tabs" style="margin-bottom:8px">
+          <button class="tab-btn active" id="ordTabTodos" onclick="setOrdTab('todos')">Todos</button>
+          <button class="tab-btn" id="ordTabPend" onclick="setOrdTab('pendiente')">⏳ Pendiente</button>
+          <button class="tab-btn" id="ordTabListo" onclick="setOrdTab('listo')">✅ Listo</button>
+          <button class="tab-btn" id="ordTabEntr" onclick="setOrdTab('entregado')">📦 Entregado</button>
+        </div>
+        <div id="listaEncargos"></div>
       </div>
-      <div id="listaEncargos"></div>
+
+      <!-- Panel Clientes -->
+      <div id="ordPanelClientes" style="display:none">
+        <div class="section-title">
+          Clientes
+          <button onclick="openClienteModal(null)" style="background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);padding:5px 12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">+ Cliente</button>
+        </div>
+        <div class="card" style="padding:12px 16px;margin-bottom:8px" id="clientesResumenCard"></div>
+        <div class="tabs" style="margin-bottom:8px">
+          <button class="tab-btn active" id="cliTabTodos" onclick="setCliTab('todos')">Todos</button>
+          <button class="tab-btn" id="cliTabDeuda" onclick="setCliTab('con_deuda')" style="color:var(--red)">⚠ Con adeudo</button>
+          <button class="tab-btn" id="cliTabPagado" onclick="setCliTab('pagado')" style="color:var(--green)">✓ Al día</button>
+        </div>
+        <div id="listaClientes"></div>
+      </div>
     </div>
 
     <!-- Hidden for JS compat -->
@@ -960,6 +994,83 @@ body{background:linear-gradient(180deg,#f8fafc,#eef2f7)!important}
   </div>
 </div>
 
+<!-- ═══ MODAL: CLIENTE ═══ -->
+<div class="modal-overlay" id="clienteModal" onclick="overlayClose(event,'clienteModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="clienteModalTitle">Nuevo cliente</div>
+    <div class="form-section">
+      <input type="hidden" id="clienteId">
+      <div>
+        <label class="form-label">Nombre del cliente</label>
+        <input class="form-input" type="text" id="clienteNombre" placeholder="Nombre completo o negocio">
+      </div>
+      <div>
+        <label class="form-label">Teléfono <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
+        <input class="form-input" type="text" id="clienteTelefono" placeholder="Ej: 7000-0000">
+      </div>
+      <div>
+        <label class="form-label">Precio especial de venta ($) <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(precio al que se le provee)</span></label>
+        <input class="form-input" type="number" id="clientePrecio" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div>
+        <label class="form-label">Producto / referencia <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
+        <input class="form-input" type="text" id="clienteProductoRef" placeholder="Ej: Pechuga por libra, caja de menudo, etc.">
+      </div>
+      <div>
+        <label class="form-label">Notas <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
+        <input class="form-input" type="text" id="clienteNotas" placeholder="Detalles adicionales...">
+      </div>
+      <button class="btn-primary" onclick="saveCliente()">✓ Guardar cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ADEUDO DE CLIENTE ═══ -->
+<div class="modal-overlay" id="adeudoModal" onclick="overlayClose(event,'adeudoModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="adeudoModalTitle">Nuevo adeudo</div>
+    <div class="form-section">
+      <input type="hidden" id="adeudoId">
+      <input type="hidden" id="adeudoClienteId">
+      <div id="adeudoClienteLabel" style="font-size:13px;font-weight:600;color:var(--primary);padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:4px"></div>
+      <div>
+        <label class="form-label">Descripción</label>
+        <input class="form-input" type="text" id="adeudoDesc" placeholder="Ej: 10 libras de pechuga">
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="form-label">Monto total ($)</label>
+          <input class="form-input" type="number" id="adeudoMonto" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div>
+          <label class="form-label">Abonado ($)</label>
+          <input class="form-input" type="number" id="adeudoAbonado" placeholder="0.00" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="form-label">Fecha de entrega</label>
+          <input class="form-input" type="date" id="adeudoFechaEntrega">
+        </div>
+        <div>
+          <label class="form-label">Fecha de pago <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(compromiso)</span></label>
+          <input class="form-input" type="date" id="adeudoFechaPago">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Estado</label>
+        <select class="form-input" id="adeudoEstado">
+          <option value="pendiente">⏳ Pendiente</option>
+          <option value="pagado">✓ Pagado</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="saveAdeudo()">✓ Guardar adeudo</button>
+    </div>
+  </div>
+</div>
+
 <!-- FAB -->
 <button class="fab" id="fabBtn" onclick="openAddModal()">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1195,6 +1306,8 @@ var editingPedidoId = null; // null = nuevo pedido, id = editando pedido existen
 var pedidosGlobal = [];
 // encargos
 var encargos = [];
+// clientes (precio especial + adeudos)
+var clientes = [];
 // fondos diarios {YYYY-MM-DD: monto}
 var fondos = {};
 // items temporales de venta multi-producto
@@ -1223,6 +1336,7 @@ function loadData() {
   try { var s=localStorage.getItem('cvd_productos'); if(s) productos=JSON.parse(s); } catch(e){productos=[];}
   try { var s=localStorage.getItem('cvd_pedidos'); if(s) pedidosGlobal=JSON.parse(s); } catch(e){pedidosGlobal=[];}
   try { var s=localStorage.getItem('cvd_encargos'); if(s) encargos=JSON.parse(s); } catch(e){encargos=[];}
+  try { var s=localStorage.getItem('cvd_clientes'); if(s) clientes=JSON.parse(s); } catch(e){clientes=[];}
   try { var s=localStorage.getItem('cvd_fondos'); if(s) fondos=JSON.parse(s); } catch(e){fondos={};}
 }
 
@@ -1231,6 +1345,7 @@ function saveData(){ _lsSave('cvd_data', data); _fbSync(); }
 function saveProductos(){ _lsSave('cvd_productos', productos); _fbSync(); }
 function savePedidos(){ _lsSave('cvd_pedidos', pedidosGlobal); _fbSync(); }
 function saveEncargos(){ _lsSave('cvd_encargos', encargos); _fbSync(); }
+function saveClientes(){ _lsSave('cvd_clientes', clientes); _fbSync(); }
 function saveFondos(){ _lsSave('cvd_fondos', fondos); _fbSync(); }
 
 function _lsSave(key, val){
@@ -1253,6 +1368,7 @@ function _fbWrite(){
     productos: JSON.stringify(productos),
     pedidos: JSON.stringify(pedidosGlobal),
     encargos: JSON.stringify(encargos),
+    clientes: JSON.stringify(clientes),
     fondos: JSON.stringify(fondos),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -1276,6 +1392,7 @@ function _fbLoad(){
       try{ if(d.productos) { productos=JSON.parse(d.productos); localStorage.setItem('cvd_productos',d.productos); } }catch(e){}
       try{ if(d.pedidos) { pedidosGlobal=JSON.parse(d.pedidos); localStorage.setItem('cvd_pedidos',d.pedidos); } }catch(e){}
       try{ if(d.encargos) { encargos=JSON.parse(d.encargos); localStorage.setItem('cvd_encargos',d.encargos); } }catch(e){}
+      try{ if(d.clientes) { clientes=JSON.parse(d.clientes); localStorage.setItem('cvd_clientes',d.clientes); } }catch(e){}
       try{ if(d.fondos) { fondos=JSON.parse(d.fondos); localStorage.setItem('cvd_fondos',d.fondos); } }catch(e){}
       renderAll();
       updateSyncIndicator();
@@ -1394,7 +1511,7 @@ function showSection(name,btn){
   if(name==='inicio') renderResumen();
   if(name==='operaciones'){ renderVentas(); renderGastos(); }
   if(name==='inventario'){ setInvMainTab('stock'); }  // setInvMainTab calls renderInventario internally
-  if(name==='ordenes') renderEncargos();
+  if(name==='ordenes') setOrdMainTab(ordMainTab||'encargos');
   if(name==='mas') renderHistorial();
   // FAB: hide only on Más
   var fabEl=document.getElementById('fabBtn');
@@ -1435,6 +1552,28 @@ function setOrdTab(tab){
   var map={todos:'ordTabTodos',pendiente:'ordTabPend',listo:'ordTabListo',entregado:'ordTabEntr'};
   if(map[tab]) document.getElementById(map[tab]).classList.add('active');
   renderEncargos();
+}
+
+// ── ÓRDENES: pestaña principal Encargos / Clientes ──
+var ordMainTab='encargos';
+function setOrdMainTab(tab){
+  ordMainTab=tab;
+  document.getElementById('ordMainTabEncargos').classList.toggle('active',tab==='encargos');
+  document.getElementById('ordMainTabClientes').classList.toggle('active',tab==='clientes');
+  document.getElementById('ordPanelEncargos').style.display=tab==='encargos'?'':'none';
+  document.getElementById('ordPanelClientes').style.display=tab==='clientes'?'':'none';
+  if(tab==='encargos') renderEncargos();
+  if(tab==='clientes') renderClientes();
+}
+
+// ── CLIENTES: filtro de pestaña ──
+var cliTab='todos';
+function setCliTab(tab){
+  cliTab=tab;
+  ['cliTabTodos','cliTabDeuda','cliTabPagado'].forEach(function(id){document.getElementById(id).classList.remove('active');});
+  var map={todos:'cliTabTodos',con_deuda:'cliTabDeuda',pagado:'cliTabPagado'};
+  if(map[tab]) document.getElementById(map[tab]).classList.add('active');
+  renderClientes();
 }
 
 // ── MAS TABS ──
@@ -1999,6 +2138,14 @@ function renderAll(){
   var encPend=encargos.filter(function(e){return e.estado==='pendiente';}).length;
   var dashPP=document.getElementById('dashPedPend'); if(dashPP) dashPP.textContent=pedPend;
   var dashEP=document.getElementById('dashEncPend'); if(dashEP) dashEP.textContent=encPend;
+  // Clientes con adeudo
+  var totalAdeudoDash=0, cntAdeudoDash=0;
+  clientes.forEach(function(c){
+    var saldo=(c.adeudos||[]).filter(function(a){return a.estado!=='pagado';}).reduce(function(s,a){return s+(a.monto-(a.abonado||0));},0);
+    if(saldo>0){totalAdeudoDash+=saldo; cntAdeudoDash++;}
+  });
+  var dashAT=document.getElementById('dashAdeudoTotal'); if(dashAT) dashAT.textContent=fmt(totalAdeudoDash);
+  var dashAC=document.getElementById('dashAdeudoCnt'); if(dashAC) dashAC.textContent=cntAdeudoDash+' cliente'+(cntAdeudoDash!==1?'s':'')+' con saldo';
   // Inventory dash
   var totalInv=productos.reduce(function(a,p){return a+p.cantidad*p.precioCosto;},0);
   var invDash=document.getElementById('invTotalInvertidoDash'); if(invDash) invDash.textContent=fmt(totalInv);
@@ -2718,6 +2865,247 @@ function eliminarEncargo(id){
   toast('Encargo eliminado');
 }
 
+// ═══════════════════════════════════════════
+//  MÓDULO CLIENTES
+// ═══════════════════════════════════════════
+
+function getCliente(id){ return clientes.find(function(c){return c.id===id;}); }
+
+function openClienteModal(id){
+  document.getElementById('clienteId').value=id||'';
+  if(id){
+    var c=getCliente(id);
+    if(!c) return;
+    document.getElementById('clienteModalTitle').textContent='Editar cliente';
+    document.getElementById('clienteNombre').value=c.nombre;
+    document.getElementById('clienteTelefono').value=c.telefono||'';
+    document.getElementById('clientePrecio').value=c.precio||'';
+    document.getElementById('clienteProductoRef').value=c.productoRef||'';
+    document.getElementById('clienteNotas').value=c.notas||'';
+  } else {
+    document.getElementById('clienteModalTitle').textContent='Nuevo cliente';
+    document.getElementById('clienteNombre').value='';
+    document.getElementById('clienteTelefono').value='';
+    document.getElementById('clientePrecio').value='';
+    document.getElementById('clienteProductoRef').value='';
+    document.getElementById('clienteNotas').value='';
+  }
+  document.getElementById('clienteModal').classList.add('open');
+}
+
+function saveCliente(){
+  var nombre=document.getElementById('clienteNombre').value.trim();
+  var telefono=document.getElementById('clienteTelefono').value.trim();
+  var precio=parseFloat(document.getElementById('clientePrecio').value)||0;
+  var productoRef=document.getElementById('clienteProductoRef').value.trim();
+  var notas=document.getElementById('clienteNotas').value.trim();
+  var idExist=document.getElementById('clienteId').value;
+  if(!nombre){toast('⚠ Ingresa el nombre del cliente');return;}
+
+  if(idExist){
+    var c=getCliente(parseInt(idExist));
+    if(c){c.nombre=nombre;c.telefono=telefono;c.precio=precio;c.productoRef=productoRef;c.notas=notas;}
+  } else {
+    clientes.push({id:Date.now(),nombre:nombre,telefono:telefono,precio:precio,productoRef:productoRef,notas:notas,adeudos:[]});
+  }
+  saveClientes();
+  closeModal('clienteModal');
+  renderClientes();
+  toast('✓ Cliente guardado');
+}
+
+function eliminarCliente(id){
+  if(!confirm('¿Eliminar este cliente? Se perderá su historial de adeudos.'))return;
+  clientes=clientes.filter(function(c){return c.id!==id;});
+  saveClientes();
+  renderClientes();
+  toast('Cliente eliminado');
+}
+
+// ── ADEUDOS ──
+function openAdeudoModal(clienteId, adeudoId){
+  var c=getCliente(clienteId);
+  if(!c) return;
+  document.getElementById('adeudoClienteId').value=clienteId;
+  document.getElementById('adeudoClienteLabel').textContent='👤 '+c.nombre;
+  document.getElementById('adeudoId').value=adeudoId||'';
+  if(!c.adeudos) c.adeudos=[];
+
+  if(adeudoId){
+    var a=c.adeudos.find(function(x){return x.id===adeudoId;});
+    if(!a) return;
+    document.getElementById('adeudoModalTitle').textContent='Editar adeudo';
+    document.getElementById('adeudoDesc').value=a.desc;
+    document.getElementById('adeudoMonto').value=a.monto;
+    document.getElementById('adeudoAbonado').value=a.abonado||0;
+    document.getElementById('adeudoFechaEntrega').value=a.fechaEntrega;
+    document.getElementById('adeudoFechaPago').value=a.fechaPago||'';
+    document.getElementById('adeudoEstado').value=a.estado;
+  } else {
+    document.getElementById('adeudoModalTitle').textContent='Nuevo adeudo';
+    document.getElementById('adeudoDesc').value='';
+    document.getElementById('adeudoMonto').value='';
+    document.getElementById('adeudoAbonado').value='';
+    document.getElementById('adeudoFechaEntrega').value=dateKey(new Date());
+    document.getElementById('adeudoFechaPago').value='';
+    document.getElementById('adeudoEstado').value='pendiente';
+  }
+  document.getElementById('adeudoModal').classList.add('open');
+}
+
+function saveAdeudo(){
+  var clienteId=parseInt(document.getElementById('adeudoClienteId').value);
+  var c=getCliente(clienteId);
+  if(!c){toast('⚠ Cliente no encontrado');return;}
+  if(!c.adeudos) c.adeudos=[];
+
+  var desc=document.getElementById('adeudoDesc').value.trim();
+  var monto=parseFloat(document.getElementById('adeudoMonto').value)||0;
+  var abonado=parseFloat(document.getElementById('adeudoAbonado').value)||0;
+  var fechaEntrega=document.getElementById('adeudoFechaEntrega').value;
+  var fechaPago=document.getElementById('adeudoFechaPago').value;
+  var estado=document.getElementById('adeudoEstado').value;
+  var idExist=document.getElementById('adeudoId').value;
+
+  if(!desc){toast('⚠ Ingresa una descripción');return;}
+  if(!monto||monto<=0){toast('⚠ Ingresa un monto válido');return;}
+  if(!fechaEntrega){toast('⚠ Selecciona la fecha de entrega');return;}
+
+  // Si el saldo queda en 0, marcar automáticamente como pagado
+  var saldo=monto-abonado;
+  if(saldo<=0) estado='pagado';
+
+  if(idExist){
+    var idx=c.adeudos.findIndex(function(x){return x.id===parseInt(idExist);});
+    if(idx!==-1){
+      c.adeudos[idx]={id:c.adeudos[idx].id,desc:desc,monto:monto,abonado:abonado,fechaEntrega:fechaEntrega,fechaPago:fechaPago||null,estado:estado};
+    }
+  } else {
+    c.adeudos.push({id:Date.now(),desc:desc,monto:monto,abonado:abonado,fechaEntrega:fechaEntrega,fechaPago:fechaPago||null,estado:estado});
+  }
+
+  saveClientes();
+  closeModal('adeudoModal');
+  renderClientes();
+  toast(saldo<=0?'✓ Adeudo registrado — saldado por completo':'✓ Adeudo guardado');
+}
+
+function eliminarAdeudo(clienteId, adeudoId){
+  if(!confirm('¿Eliminar este adeudo?'))return;
+  var c=getCliente(clienteId);
+  if(!c) return;
+  c.adeudos=(c.adeudos||[]).filter(function(a){return a.id!==adeudoId;});
+  saveClientes();
+  renderClientes();
+  toast('Adeudo eliminado');
+}
+
+// Marcar adeudo como pagado rápidamente (abona el resto y pone fecha de pago = hoy)
+function marcarAdeudoPagado(clienteId, adeudoId){
+  var c=getCliente(clienteId);
+  if(!c) return;
+  var a=(c.adeudos||[]).find(function(x){return x.id===adeudoId;});
+  if(!a) return;
+  a.abonado=a.monto;
+  a.estado='pagado';
+  a.fechaPago=dateKey(new Date());
+  saveClientes();
+  renderClientes();
+  toast('✓ Adeudo marcado como pagado');
+}
+
+function renderClientes(){
+  var el=document.getElementById('listaClientes');
+  var resumenEl=document.getElementById('clientesResumenCard');
+  if(!el) return;
+
+  // Resumen general de deuda
+  var totalAdeudado=0, totalClientesConDeuda=0;
+  clientes.forEach(function(c){
+    var saldo=(c.adeudos||[]).filter(function(a){return a.estado!=='pagado';}).reduce(function(s,a){return s+(a.monto-(a.abonado||0));},0);
+    if(saldo>0){totalAdeudado+=saldo; totalClientesConDeuda++;}
+  });
+  if(resumenEl){
+    resumenEl.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:2px">Total adeudado</div>'+
+      '<div style="font-size:11px;color:var(--text3)">'+totalClientesConDeuda+' cliente'+(totalClientesConDeuda!==1?'s':'')+' con saldo pendiente</div></div>'+
+      '<div style="font-family:\'DM Mono\',monospace;font-size:22px;font-weight:700;color:'+(totalAdeudado>0?'var(--red)':'var(--green)')+'">'+fmt(totalAdeudado)+'</div>'+
+    '</div>';
+  }
+
+  if(!clientes.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">No hay clientes registrados.<br>Toca <strong>+ Cliente</strong> para agregar.</div></div>';
+    return;
+  }
+
+  // Calcular saldo por cliente y filtrar según pestaña
+  var withSaldo=clientes.map(function(c){
+    var saldo=(c.adeudos||[]).filter(function(a){return a.estado!=='pagado';}).reduce(function(s,a){return s+(a.monto-(a.abonado||0));},0);
+    return {c:c, saldo:saldo};
+  });
+  if(typeof cliTab!=='undefined'){
+    if(cliTab==='con_deuda') withSaldo=withSaldo.filter(function(x){return x.saldo>0;});
+    if(cliTab==='pagado') withSaldo=withSaldo.filter(function(x){return x.saldo<=0;});
+  }
+  withSaldo.sort(function(a,b){return b.saldo-a.saldo;});
+
+  if(!withSaldo.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No hay clientes en esta categoría.</div></div>';
+    return;
+  }
+
+  var html='';
+  withSaldo.forEach(function(x){
+    var c=x.c, saldo=x.saldo;
+    var adeudosOrdenados=(c.adeudos||[]).slice().sort(function(a,b){return a.fechaEntrega>b.fechaEntrega?-1:1;});
+
+    html+='<div class="ped-card" style="margin-bottom:10px">'+
+      '<div class="ped-card-top">'+
+        '<div class="ped-card-info">'+
+          '<div class="ped-card-name">👤 '+esc(c.nombre)+'</div>'+
+          '<div class="ped-card-meta">'+
+            (c.telefono?'📞 '+esc(c.telefono)+'<br>':'')+
+            (c.precio?'Precio especial: <strong>'+fmt(c.precio)+'</strong>'+(c.productoRef?' · '+esc(c.productoRef):'')+'<br>':'')+
+            (c.notas?esc(c.notas):'')+
+          '</div>'+
+          '<span class="ped-status '+(saldo>0?'ped-status-pending':'ped-status-done')+'">'+(saldo>0?'⚠ Debe '+fmt(saldo):'✓ Al día')+'</span>'+
+        '</div>'+
+        '<button onclick="eliminarCliente('+c.id+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:2px 6px;line-height:1;flex-shrink:0">×</button>'+
+      '</div>';
+
+    // Lista de adeudos
+    if(adeudosOrdenados.length){
+      html+='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">';
+      adeudosOrdenados.forEach(function(a){
+        var saldoA=a.monto-(a.abonado||0);
+        var pagado=a.estado==='pagado'||saldoA<=0;
+        var fE=a.fechaEntrega?a.fechaEntrega.split('-').reverse().join('/'):'-';
+        var fP=a.fechaPago?a.fechaPago.split('-').reverse().join('/'):null;
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:12px;font-weight:500">'+esc(a.desc)+'</div>'+
+            '<div style="font-size:10px;color:var(--text3)">Entrega: '+fE+(fP?' · Pagado: '+fP:(a.fechaPago===null&&!pagado?'':''))+
+            (pagado?'':' · Pago esperado: '+(a.fechaPago?a.fechaPago.split('-').reverse().join('/'):'sin definir'))+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;margin-right:6px">'+
+            '<div style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:600;color:'+(pagado?'var(--green)':'var(--red)')+'">'+(pagado?'✓ '+fmt(a.monto):fmt(saldoA)+' / '+fmt(a.monto))+'</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:4px;flex-shrink:0">'+
+            (!pagado?'<button onclick="marcarAdeudoPagado('+c.id+','+a.id+')" style="background:#e8f7f1;border:1px solid #a7e3c8;color:#0f6e56;border-radius:6px;padding:3px 7px;font-size:10px;cursor:pointer">✓ Pagar</button>':'')+
+            '<button onclick="openAdeudoModal('+c.id+','+a.id+')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 7px;font-size:10px;cursor:pointer">✏</button>'+
+            '<button onclick="eliminarAdeudo('+c.id+','+a.id+')" style="background:#fdeee9;border:1px solid #f3c4b3;color:var(--red);border-radius:6px;padding:3px 7px;font-size:10px;cursor:pointer">×</button>'+
+          '</div>'+
+        '</div>';
+      });
+      html+='</div>';
+    }
+
+    html+='<button onclick="openAdeudoModal('+c.id+',null)" style="width:100%;margin-top:8px;background:var(--surface2);border:1px dashed var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">+ Agregar adeudo</button>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
 function renderEncargos(){
   var el=document.getElementById('listaEncargos');
   if(!el) return;
@@ -2810,6 +3198,7 @@ function exportarDatos(){
     cvd_productos: localStorage.getItem('cvd_productos'),
     cvd_pedidos: localStorage.getItem('cvd_pedidos'),
     cvd_encargos: localStorage.getItem('cvd_encargos'),
+    cvd_clientes: localStorage.getItem('cvd_clientes'),
     cvd_fondos: localStorage.getItem('cvd_fondos'),
     exportado: new Date().toISOString()
   };
@@ -2833,6 +3222,7 @@ function importarDatos(event){
       if(backup.cvd_productos) localStorage.setItem('cvd_productos',backup.cvd_productos);
       if(backup.cvd_pedidos) localStorage.setItem('cvd_pedidos',backup.cvd_pedidos);
       if(backup.cvd_encargos) localStorage.setItem('cvd_encargos',backup.cvd_encargos);
+      if(backup.cvd_clientes) localStorage.setItem('cvd_clientes',backup.cvd_clientes);
       if(backup.cvd_fondos) localStorage.setItem('cvd_fondos',backup.cvd_fondos);
       loadData();
       renderAll();
